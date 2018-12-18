@@ -102,7 +102,7 @@ class RasterToVector(EOTask):
     If raster mask has multiple channels each of them will be vectorized separately but polygons will be in the
     same vector feature
     """
-    def __init__(self, features, values=None, raster_dtype=None):
+    def __init__(self, features, values=None, value_column_name='VALUE', raster_dtype=None):
         """
         :param features: One or more raster mask features which will be vectorized together with an optional new name
         of vector feature. If no new name is given the same name will be used.
@@ -116,6 +116,9 @@ class RasterToVector(EOTask):
         :param values: List of values which will be vectorized. By default is set to ``None`` and all values will be
             vectorized
         :type values: list(int) or None
+        :param value_column_name: Name of a column in geopandas data frame where values of rasterized polygons will
+            be written. If set to `None` no such column will be created.
+        :type value_column_name: str or None
         :param raster_dtype: If raster feature mask is of type which is not supported by ``rasterio.features.shapes``
             (e.g. ``numpy.int64``) this parameter is used to cast the mask into a different type
             (``numpy.int16``, ``numpy.int32``, ``numpy.uint8``, ``numpy.uint16`` or ``numpy.float32``). By default
@@ -124,6 +127,7 @@ class RasterToVector(EOTask):
         """
         self.feature_gen = self._parse_features(features, new_names=True)
         self.values = values
+        self.value_column_name = value_column_name
         self.raster_dtype = raster_dtype
 
         for feature_type, _, _ in self.feature_gen:
@@ -159,11 +163,13 @@ class RasterToVector(EOTask):
                 geo_list.append(shapely.geometry.shape(geojson))
                 value_list.append(value)
 
-        geo_series = GeoSeries(geo_list)
-        value_series = GeoSeries(value_list)
+        series_dict = dict(geometry=GeoSeries(geo_list))
 
-        series_dict = dict(VALUE=value_series, geometry=geo_series) if timestamp is None else \
-            dict(VALUE=value_series, TIMESTAMP=GeoSeries([timestamp] * len(geo_list)), geometry=geo_series)
+        if self.value_column_name is not None:
+            series_dict[self.value_column_name] = GeoSeries(value_list)
+
+        if timestamp is not None:
+            series_dict['TIMESTAMP'] = GeoSeries([timestamp] * len(geo_list))
 
         return GeoDataFrame(series_dict, crs={'init': 'epsg:{}'.format(crs.value)})
 
