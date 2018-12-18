@@ -30,14 +30,18 @@ class VectorToRaster(EOTask):
     :type raster_dtype: numpy.dtype
     :param no_data_value: Value of raster pixels which are outside of vector polygons
     :type no_data_value: int or float
+    :param params: Additional parameters of `rasterio.features.rasterize` which are not `shapes`, `out`, `transform`
+        or `dtype`
     """
-    def __init__(self, feature, vector_data, raster_value, raster_shape, raster_dtype=np.uint8, no_data_value=0):
+    def __init__(self, feature, vector_data, raster_value, raster_shape, raster_dtype=np.uint8, no_data_value=0,
+                 **params):
         self.feature_type, self.feature_name = next(iter(self._parse_features(feature)))
         self.vector_data = vector_data
         self.raster_value = raster_value
         self.raster_shape = raster_shape
         self.raster_dtype = raster_dtype
         self.no_data_value = no_data_value
+        self.params = params
 
     def _get_submap(self, eopatch):
         """
@@ -85,7 +89,7 @@ class VectorToRaster(EOTask):
 
         if not bbox_map.empty:
             rasterio.features.rasterize([(bbox_map.cascaded_union.buffer(0), self.raster_value)], out=raster,
-                                        transform=data_transform, dtype=self.raster_dtype)
+                                        transform=data_transform, dtype=self.raster_dtype, **self.params)
 
         eopatch[self.feature_type][self.feature_name] = raster[..., np.newaxis]
 
@@ -102,7 +106,7 @@ class RasterToVector(EOTask):
     If raster mask has multiple channels each of them will be vectorized separately but polygons will be in the
     same vector feature
     """
-    def __init__(self, features, values=None, value_column_name='VALUE', raster_dtype=None):
+    def __init__(self, features, values=None, value_column_name='VALUE', raster_dtype=None, **params):
         """
         :param features: One or more raster mask features which will be vectorized together with an optional new name
         of vector feature. If no new name is given the same name will be used.
@@ -124,11 +128,13 @@ class RasterToVector(EOTask):
             (``numpy.int16``, ``numpy.int32``, ``numpy.uint8``, ``numpy.uint16`` or ``numpy.float32``). By default
             value of the parameter is ``None`` and no casting is done.
         :type raster_dtype: numpy.dtype or None
+        :param params: Additional parameters of `rasterio.features.shapes` which are not `source`, `mask` or `transform`
         """
         self.feature_gen = self._parse_features(features, new_names=True)
         self.values = values
         self.value_column_name = value_column_name
         self.raster_dtype = raster_dtype
+        self.params = params
 
         for feature_type, _, _ in self.feature_gen:
             if not (feature_type.is_spatial() and feature_type.is_discrete()):
@@ -159,7 +165,7 @@ class RasterToVector(EOTask):
         for idx in range(raster.shape[-1]):
             for geojson, value in rasterio.features.shapes(raster[..., idx],
                                                            mask=None if mask is None else mask[..., idx],
-                                                           transform=data_transform):
+                                                           transform=data_transform, **self.params):
                 geo_list.append(shapely.geometry.shape(geojson))
                 value_list.append(value)
 
