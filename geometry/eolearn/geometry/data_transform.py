@@ -30,8 +30,8 @@ class VectorToRaster(EOTask):
     :type raster_dtype: numpy.dtype
     :param no_data_value: Value of raster pixels which are outside of vector polygons
     :type no_data_value: int or float
-    :param params: Additional parameters of `rasterio.features.rasterize` which are not `shapes`, `out`, `transform`
-        or `dtype`
+    :param params: Additional parameters which will be passed to `rasterio.features.rasterize`. Current options are
+        parameters `all_touched` and `merge_alg`
     """
     def __init__(self, feature, vector_data, raster_value, raster_shape, raster_dtype=np.uint8, no_data_value=0,
                  **params):
@@ -128,7 +128,8 @@ class RasterToVector(EOTask):
             (``numpy.int16``, ``numpy.int32``, ``numpy.uint8``, ``numpy.uint16`` or ``numpy.float32``). By default
             value of the parameter is ``None`` and no casting is done.
         :type raster_dtype: numpy.dtype or None
-        :param params: Additional parameters of `rasterio.features.shapes` which are not `source`, `mask` or `transform`
+        :param params: Additional parameters which will be passed to `rasterio.features.shapes`. Current option is
+            parameter `connectivity`
         """
         self.feature_gen = self._parse_features(features, new_names=True)
         self.values = values
