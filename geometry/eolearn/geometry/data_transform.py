@@ -169,7 +169,7 @@ class RasterToVector(EOTask):
             series_dict[self.value_column_name] = GeoSeries(value_list)
 
         if timestamp is not None:
-            series_dict['TIMESTAMP'] = GeoSeries([timestamp] * len(geo_list))
+            series_dict[FeatureType.TIMESTAMP.value] = GeoSeries([timestamp] * len(geo_list))
 
         return GeoDataFrame(series_dict, crs={'init': 'epsg:{}'.format(crs.value)})
 

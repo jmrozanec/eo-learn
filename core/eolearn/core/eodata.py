@@ -807,10 +807,20 @@ class _FeatureDict(dict):
                 value = GeoDataFrame(dict(geometry=value), crs=value.crs)
 
             if isinstance(value, GeoDataFrame):
-                if self.feature_type is FeatureType.VECTOR:
-                    if FeatureType.TIMESTAMP.value.upper() not in value:
-                        raise ValueError("{} feature has to contain a column 'TIMESTAMP' with "
-                                         "timestamps".format(self.feature_type))
+                column_names = set(value)
+                timestamp_column_name = FeatureType.TIMESTAMP.value
+
+                if self.feature_type is FeatureType.VECTOR and timestamp_column_name not in column_names:
+
+                    if timestamp_column_name not in [name.lower() for name in column_names]:
+                        raise ValueError("{} feature has to contain a column named 'timestamp' with timestamps"
+                                         .format(self.feature_type))
+
+                    possible_timestamp_column = [name for name in column_names
+                                                 if name.lower() == timestamp_column_name][0]
+                    value = value.rename(index=str, columns={possible_timestamp_column: timestamp_column_name})
+                    warnings.warn("In vector feature a column '{}' was renamed to 'timestamp'"
+                                  .format(possible_timestamp_column), stacklevel=3)
 
                 return value
 
